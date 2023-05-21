@@ -1,4 +1,4 @@
-# Larisa
+# Bachelor Thesis Project
 Voice assistant based on the project
 [applied AI](https://github.com/hsu-ai-course/hsu.ai/) course.
 
