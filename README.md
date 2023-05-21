@@ -1,5 +1,5 @@
 # Larisa
-Voice assistant - education project for 
+Voice assistant based on the project
 [applied AI](https://github.com/hsu-ai-course/hsu.ai/) course.
 
 
@@ -15,4 +15,4 @@ Initially designed for Raspberry Pi model B (the old one) this project contains 
 6. Install `pip3 install -r requirements.txt` to bring python3 dependencies.
 
 ## Run
-Launch `python3 larisa.py`. By default the system triggers to `John` name. Say or type `John` ... wait ... `stop` to finish.
+Launch `python3 larisa.py`. By default the system triggers to `Hello` name. Say or type `Hello` ... wait ... `stop` to finish.
