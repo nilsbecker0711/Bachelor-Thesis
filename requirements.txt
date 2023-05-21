@@ -1,0 +1,8 @@
+ibm-watson>=5.2.2
+geocoder>=1.38.1
+geopy>=2.2.0
+pocketsphinx>=0.1.5
+pyaudio>=0.2.11
+sounddevice>=0.4.1
+SpeechRecognition>=3.8.1
+requests>=2.26.0
