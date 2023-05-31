@@ -2,8 +2,6 @@ import configparser
 import logging
 import logic.processor as prc
 import speech_recognition as sr
-from ibm_watson import SpeechToTextV1
-from ibm_cloud_sdk_core.authenticators import IAMAuthenticator as IAMA
 import sounddevice
     
 def start_text_interface(cfg):
@@ -15,14 +13,6 @@ def start_text_interface(cfg):
         result = prc.process(command, cfg, logging)
         print(result)
 
-def start_web_interface(cfg):
-    """
-    Starts the server processing requests via web interface
-    :param cfg: config dictionary used to get server parameters
-    :return: this launches an event loop. Returns when finished
-    """
-    logging.warning("Not implemented yet")
-    pass
 
 
 def start_voice_interface(cfg):
@@ -61,26 +51,7 @@ def start_voice_interface(cfg):
         
         try:
             recognized = r.recognize_google(audio)
-            '''
-            # recognize a word
-            if 'sphinx' == recognizer_type:
-                logging.info("Using sphinx")
-                recognized = r.recognize_sphinx(audio, keyword_entries=[(kw, 1.0) for kw in keywords]).strip()
-            elif 'wit' == recognizer_type:
-                logging.info("using wit")
-                recognized = r.recognize_wit(audio, key=cfg['service']['wit']['access_token']).strip()
-            elif 'ibm' == recognizer_type:
-                logging.info("using IBM")
-                if ibm_auth is None:
-                    logging.info('Instantiating IBM recognizer')
-                    ibm_auth = IAMA(apikey=cfg['ibm']['apikey'])
-                    ibm_recognizer = SpeechToTextV1(authenticator=ibm_auth)
-                    ibm_recognizer.set_service_url(cfg['ibm']['url'])
-                logging.info('Recognizing IBM')
-                recognized = ibm_recognizer.recognize(audio=audio.get_wav_data(), content_type='audio/wav').get_result()
-                logging.info(recognized)
-                recognized = recognized['results'][0]['alternatives'][0]['transcript'].strip() if recognized['results'] else ''
-            '''
+           
             logging.info(f"word `{recognized}` captured")
         
             # if this was a keyword - process a command
@@ -91,19 +62,8 @@ def start_voice_interface(cfg):
                     command_audio = r.listen(source)
                     command = r.recognize_google(command_audio) #test 24.04.
                     command = command.lower() #test 26.04.
-                    '''
-                    command_audio = r.listen(source)
                     
-                if 'sphinx' == recognizer_type:
-                    command = r.recognize_sphinx(command_audio)
-                elif 'wit' == recognizer_type:
-                    command = r.recognize_wit(command_audio, key=cfg['service']['wit']['access_token'])
-                elif 'ibm' == recognizer_type:
-                    command = ibm_recognizer.recognize(audio=command_audio.get_wav_data(), content_type='audio/wav').get_result()
-                    logging.info(command)
-                    command = command['results'][0]['alternatives'][0]['transcript'].strip() if command['results'] else ''
-
-                     '''
+                   
                 # exit on stop word
                 print(command)
                 if command == stopword:
@@ -131,8 +91,6 @@ if __name__ == "__main__":
     mode = config['ui']['mode']
     if 'text' == mode:
         start_text_interface(config)
-    elif 'web' == mode:
-        start_web_interface(config)
     elif 'voice' == mode:
         start_voice_interface(config)
     else:
