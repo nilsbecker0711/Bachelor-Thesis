@@ -18,7 +18,6 @@ def extract_mfcc(audio_path):
     #audio = np.frombuffer(audio, dtype=np.int16)
     mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=128)
 
-
     mfcc_mean = np.mean(mfcc, axis=1)
 
    
@@ -28,6 +27,7 @@ def extract_mfcc(audio_path):
 
 
 def plot_mel_spectrogram(audio_path):
+    
     '''
     Shows a visual representation of Mel Frequencys, by first calculating and then plotting them
     :param: audio_path path to audio file
@@ -132,3 +132,5 @@ def predict_single_gender(classifier, audio_path):
     except Exception as e:
         print(e)
         return("Prediction failed", False)
+    
+train_gender_classification("samples/commonvoice/info/Filterd.xlsx", "samples/commonvoice")   
