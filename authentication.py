@@ -1,10 +1,11 @@
 import librosa 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
+from sklearn.decomposition import PCA
 import pandas as pd
-from sklearn.svm import SVC
 import joblib
 import os
 from datetime import datetime
@@ -123,17 +124,16 @@ def train_speaker_classification(data_path, audio_path):
     voice_samples = pd.read_excel(data, usecols=[0,1])
     speakers = []
     features = []
-    i=0
+    print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
-        if i==1500:
-           pass
         speakerID, audio_path_detail = sample
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
         speakers.append(speakerID)
-        features.append(mfcc_features)
-        i = i+1
-    
+        features.append(mfcc_features)      
+    print(f"Feature Extraction completed: {datetime.now()}")
+
     X_train, X_test, y_train, y_test = train_test_split(features, speakers, test_size=0.2)
+
     classifier = train_classifier( X_train, X_test, y_train, y_test)
     return classifier
 
@@ -141,15 +141,23 @@ def train_speaker_classification(data_path, audio_path):
 def train_classifier(X_train, X_test, y_train, y_test):
 
     classifier = SVC()
-    param_grid = {'C': [0.1, 1, 10, 100]}
+    param_grid = {
+    'C': [0.1, 1, 10],
+    'kernel': ['linear', 'poly', 'rbf'],
+    'gamma': [0.1, 1, 10],
+    'degree': [2, 3, 4],
+    'class_weight': [None, 'balanced']
+    }
+    print(f"Parameter Search Started: {datetime.now()}")
     grid_search = GridSearchCV(classifier, param_grid, cv=5)
     grid_search.fit(X_train, y_train)
+    print(f"Parameter Search Completed: {datetime.now()}")
 
-    best_C = grid_search.best_params_['C']
-    print(best_C)
+    params = grid_search.best_params_
+    print(params)
 
    
-    classifier = SVC(C=best_C)
+    classifier = SVC(C=params['C'], kernel=params['kernel'], gamma=params['gamma'], degree=params['degree'], class_weight=params['class_weight'])
     print("Training started")
     classifier.fit(X_train, y_train)
     print("Training finished")
