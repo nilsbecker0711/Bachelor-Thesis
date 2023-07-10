@@ -140,8 +140,16 @@ def train_speaker_classification(data_path, audio_path):
 
 def train_classifier(X_train, X_test, y_train, y_test):
 
-   
     classifier = SVC()
+    param_grid = {'C': [0.1, 1, 10, 100]}
+    grid_search = GridSearchCV(classifier, param_grid, cv=5)
+    grid_search.fit(X_train, y_train)
+
+    best_C = grid_search.best_params_['C']
+    print(best_C)
+
+   
+    classifier = SVC(C=best_C)
     print("Training started")
     classifier.fit(X_train, y_train)
     print("Training finished")
