@@ -148,8 +148,8 @@ def train_classifier(X_train, X_test, y_train, y_test):
     'degree': [2, 3, 4],
     'class_weight': [None, 'balanced']
     }
-    print(f"Parameter Search Started: {datetime.now()}")
-    grid_search = GridSearchCV(classifier, param_grid, cv=5)
+    print(f"Parameter Search Started (Using all CPU Cores in parallel): {datetime.now()}")
+    grid_search = GridSearchCV(classifier, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(X_train, y_train)
     print(f"Parameter Search Completed: {datetime.now()}")
 
