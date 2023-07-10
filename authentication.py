@@ -2,11 +2,14 @@ import librosa
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 import pandas as pd
 from sklearn.svm import SVC
 import joblib
 import os
 from datetime import datetime
+
+dirname = os.path.dirname(__file__)
 
 def extract_mfcc(audio_path):
     '''
@@ -55,7 +58,6 @@ def save_classifier(classifier):
     '''
 
     try:
-       dirname = os.path.dirname(__file__)
        now = datetime.now()
        date = now.strftime("%d/%m/%Y_%H_%M")
        filename = os.path.join(dirname, f'models/svc_model{date}.jl')
@@ -90,8 +92,8 @@ def train_gender_classification(data_path, audio_path):
     :param audio_path: path to folder, where audio files are stored
     :return: trained gender classifier
     '''
-
-    voice_samples = pd.read_excel(data_path, usecols=[1,6])
+    data = os.path.join(dirname, data_path)
+    voice_samples = pd.read_excel(data, usecols=[1,6])
     #print(voice_samples)
     features = []
     genders = []
@@ -107,6 +109,38 @@ def train_gender_classification(data_path, audio_path):
     X_train, X_test, y_train, y_test = train_test_split(features, genders, test_size=0.2)
 
     #Actual Training
+    classifier = train_classifier( X_train, X_test, y_train, y_test)
+    return classifier
+
+def train_speaker_classification(data_path, audio_path):
+    '''
+    Trains a SVC to differentiate between speakers.
+    :param data_path: link to an excel file containing paths to audio files and distict speaker ID's
+    :param audio_path: path to folder, where audio files are stored
+    :return: trained gender classifier
+    '''
+    data = os.path.join(dirname, data_path)
+    voice_samples = pd.read_excel(data, usecols=[0,1])
+    speakers = []
+    features = []
+    i=0
+    for index, sample in voice_samples.iterrows():
+        if i==1500:
+           pass
+        speakerID, audio_path_detail = sample
+        mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
+        speakers.append(speakerID)
+        features.append(mfcc_features)
+        i = i+1
+    
+    X_train, X_test, y_train, y_test = train_test_split(features, speakers, test_size=0.2)
+    classifier = train_classifier( X_train, X_test, y_train, y_test)
+    return classifier
+
+
+def train_classifier(X_train, X_test, y_train, y_test):
+
+   
     classifier = SVC()
     print("Training started")
     classifier.fit(X_train, y_train)
@@ -132,5 +166,7 @@ def predict_single_gender(classifier, audio_path):
     except Exception as e:
         print(e)
         return("Prediction failed", False)
-    
-train_gender_classification("samples/commonvoice/info/Filterd.xlsx", "samples/commonvoice")   
+
+
+
+train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")   
