@@ -9,6 +9,8 @@ import pandas as pd
 import joblib
 import os
 from datetime import datetime
+import logging
+
 
 dirname = os.path.dirname(__file__)
 
@@ -95,7 +97,6 @@ def train_gender_classification(data_path, audio_path):
     '''
     data = os.path.join(dirname, data_path)
     voice_samples = pd.read_excel(data, usecols=[1,6])
-    #print(voice_samples)
     features = []
     genders = []
 
@@ -106,18 +107,15 @@ def train_gender_classification(data_path, audio_path):
         features.append(mfcc_features)
         genders.append(gender)
 
-    #Split Data
-  
-
-    #Actual Training
     classifier = train_classifier(features, genders)
     return classifier
 
-def train_speaker_classification(data_path, audio_path):
+def train_speaker_classification(data_path, audio_path, tune=False):
     '''
     Trains a SVC to differentiate between speakers.
     :param data_path: link to an excel file containing paths to audio files and distict speaker ID's
     :param audio_path: path to folder, where audio files are stored
+    :param tune: Indicates if the SVC hyperparameters C and kernel should be optimized before training
     :return: trained gender classifier
     '''
     data = os.path.join(dirname, data_path)
@@ -136,14 +134,13 @@ def train_speaker_classification(data_path, audio_path):
         i=i+1    
     print(f"Feature Extraction completed: {datetime.now()}")
 
-    classifier = train_classifier(features, speakers)
+    classifier = train_classifier(features, speakers, tune)
     return classifier
 
-
-def train_classifier(features, criteria):
-
-    X_train, X_test, y_train, y_test = train_test_split(features, criteria, test_size=0.2)
- 
+def tune_SVC_hyperparameters(X_train, y_train):
+    '''
+    Find the optimal parameters for C and Kernel for a 
+    '''
     classifier = SVC()
 
     param_grid = {
@@ -158,9 +155,18 @@ def train_classifier(features, criteria):
 
     params = grid_search.best_params_
     print(f'Beste Parameter: {params}')
+    return [params['C'], params['kernel']]
 
-   
-    classifier = SVC(C=params['C'], kernel=params['kernel'])
+def train_classifier(features, criteria, tune=False):
+
+    X_train, X_test, y_train, y_test = train_test_split(features, criteria, test_size=0.2)
+
+    if tune:
+        C, kernel = tune_SVC_hyperparameters(X_train, y_train)
+        classifier = SVC(C=C, kernel=kernel)
+    else:
+        classifier = SVC()
+
     print("Training started")
     classifier.fit(X_train, y_train)
     print("Training finished")
@@ -172,7 +178,7 @@ def train_classifier(features, criteria):
 def predict_single_gender(classifier, audio_path):
     '''
     Predict for a single sample if the person is a male or female based on a given trained classifier
-    :param classifier: a prerained classifier 
+    :param classifier: a pretrained classifier 
     :param audio_path: path to the audio file to be classified
     :return: If no exception is raised -> A String with the name of the sample and the predicted gender, True
              If an exception is raised -> A String with a short notice of the failed prediction, False
@@ -189,22 +195,25 @@ def predict_single_gender(classifier, audio_path):
 def predict_single_speaker(classifier, audio_path):
     '''
     Predict for a single sample who the speaker is
-    :param classifier: a prerained classifier 
+    :param classifier: a pretrained classifier 
     :param audio_path: path to the audio file to be classified
     :return: If no exception is raised -> A String with the name of the sample and the predicted speaker, True
              If an exception is raised -> A String with a short notice of the failed prediction, False
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     try:
-        predicted_label1 = classifier.predict([new_mfcc_features])
-        return(f"{audio_path} is a sample of a {predicted_label1[0]}", True)
-  
+        prediction = classifier.predict([new_mfcc_features])
+        score = classifier.decision_function([new_mfcc_features])[0]
+        print(np.mean(np.abs(score)))
+        print(f"{audio_path} is a sample of a {prediction[0]}, score:", True)
+        
     except Exception as e:
         print(e)
-        return("Prediction failed", False)
+        return(None,False)
 
 
-#model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))  
+#model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", True))  
 #print(model1)
 classifier = load_classifier("svc_model10_07_2023_21_08.jl", from_models=True)
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
 print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
