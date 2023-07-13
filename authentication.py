@@ -208,11 +208,13 @@ def predict_single_speaker(classifier, audio_path):
     try:
         #prediction = classifier.predict([new_mfcc_features])
         #score = classifier.decision_function([new_mfcc_features])[0]
-       
+        pred = classifier.predict_proba([new_mfcc_features])[0]
+        decision = classifier.classes_[pred.argmax()]
+        highest_probability = pred.max()
 
         #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
         
-        return 
+        return decision, highest_probability
     except Exception as e:
         print(e)
         return(None,False)
