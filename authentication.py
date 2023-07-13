@@ -26,12 +26,13 @@ def extract_mfcc(audio_path):
     '''
     audio, sr = librosa.load(audio_path)
     #audio = np.frombuffer(audio, dtype=np.int16)
-    mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=128)
+    mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
 
     mfcc_mean = np.mean(mfcc, axis=1)
 
     mfcc_mean_normalized = (mfcc_mean - np.min(mfcc_mean)) / (np.max(mfcc_mean) - np.min(mfcc_mean))
     #print(mfcc_mean_normalized)
+
     return mfcc_mean_normalized, sr, audio
 
 
@@ -144,7 +145,7 @@ def tune_SVC_hyperparameters(X_train, y_train):
     '''
     Find the optimal parameters for C and Kernel for a 
     '''
-    classifier =  make_pipeline(StandardScaler(), SVC(probability=True, cache_size= 1500))
+    classifier =  SVC()
    
 
     param_grid = {
@@ -155,7 +156,6 @@ def tune_SVC_hyperparameters(X_train, y_train):
     grid_search = GridSearchCV(classifier, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(X_train, y_train)
     print(f"Parameter Search Completed: {datetime.now()}")
-
     params = grid_search.best_params_
     print(f'Beste Parameter: {params}')
     return [params['C'], params['kernel']]
@@ -167,7 +167,7 @@ def train_classifier(features, criteria, tune=False):
 
     if tune:
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
-        classifier = make_pipeline(StandardScaler(), SVC(C=C, kernel=kernel, probability=True, cache_size= 1500))
+        classifier = SVC(C=C, kernel=kernel)
     else:
         classifier = SVC()
 
@@ -229,3 +229,5 @@ model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
 #print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+
+#plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
