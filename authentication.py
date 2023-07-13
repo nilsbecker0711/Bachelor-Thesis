@@ -4,15 +4,11 @@ import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.decomposition import PCA
 import pandas as pd
 import joblib
 import os
 from datetime import datetime
 import logging
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
 
 
