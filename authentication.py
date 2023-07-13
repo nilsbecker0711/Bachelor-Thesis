@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.decomposition import PCA
 import pandas as pd
 import joblib
 import os
 from datetime import datetime
 import logging
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
 
 
 dirname = os.path.dirname(__file__)
@@ -26,10 +30,9 @@ def extract_mfcc(audio_path):
 
     mfcc_mean = np.mean(mfcc, axis=1)
 
-   
     mfcc_mean_normalized = (mfcc_mean - np.min(mfcc_mean)) / (np.max(mfcc_mean) - np.min(mfcc_mean))
     #print(mfcc_mean_normalized)
-    return mfcc, sr, audio
+    return mfcc_mean_normalized, sr, audio
 
 
 def plot_mel_spectrogram(audio_path):
@@ -141,13 +144,13 @@ def tune_SVC_hyperparameters(X_train, y_train):
     '''
     Find the optimal parameters for C and Kernel for a 
     '''
-    classifier = SVC(kernel = 'rbf')
+    classifier =  make_pipeline(StandardScaler(), SVC(probability=True, cache_size= 1500))
+   
 
     param_grid = {
-    'C': [0.1, 1, 10, 100],
-    'gamma' : [0.1, 1, 10, 100]
+    'C': [0.1, 1, 10],
+    'kernel':['poly', 'linear', 'rbf'],
     }
-
     print(f"Parameter Search Started (Using all CPU Cores in parallel): {datetime.now()}")
     grid_search = GridSearchCV(classifier, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(X_train, y_train)
@@ -155,15 +158,16 @@ def tune_SVC_hyperparameters(X_train, y_train):
 
     params = grid_search.best_params_
     print(f'Beste Parameter: {params}')
-    return [params['C'], params['gamma']]
+    return [params['C'], params['kernel']]
+    #return [params['C'], 'rbf', params['gamma']]
 
 def train_classifier(features, criteria, tune=False):
 
     X_train, X_test, y_train, y_test = train_test_split(features, criteria, test_size=0.2)
 
     if tune:
-        C, gamma = tune_SVC_hyperparameters(X_train, y_train)
-        classifier = SVC(C=C, kernel='rbf', gamma = gamma)
+        C, kernel = tune_SVC_hyperparameters(X_train, y_train)
+        classifier = make_pipeline(StandardScaler(), SVC(C=C, kernel=kernel, probability=True, cache_size= 1500))
     else:
         classifier = SVC()
 
@@ -202,23 +206,22 @@ def predict_single_speaker(classifier, audio_path):
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     try:
-        prediction = classifier.predict([new_mfcc_features])
-        score = classifier.decision_function([new_mfcc_features])[0]
-        score2 = -np.abs(score)
-        #max_decision_distance = np.max(np.abs(classifier.decision_function(classifier.support_vectors_)))
-        #normalized_score = score / max_decision_distance
+        #prediction = classifier.predict([new_mfcc_features])
+        #score = classifier.decision_function([new_mfcc_features])[0]
+        
 
-        print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(score2))}", True)
-        return
+        #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
+        
+        return classifier.predict_proba([new_mfcc_features])[0]
     except Exception as e:
         print(e)
         return(None,False)
 
 
 model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", True))
-#train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", True)  
+#train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")  
 #print(model1)
-#classifier = load_classifier("svc_model10_07_2023_21_08.jl", from_models=True)
+#classifier = load_classifier("svc_model13_07_2023_21_03_prob.jl", from_models=True)
 
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
