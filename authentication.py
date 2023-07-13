@@ -26,7 +26,7 @@ def extract_mfcc(audio_path):
     '''
     audio, sr = librosa.load(audio_path)
     #audio = np.frombuffer(audio, dtype=np.int16)
-    mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
+    mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=128)
 
     mfcc_mean = np.mean(mfcc, axis=1)
 
@@ -145,7 +145,7 @@ def tune_SVC_hyperparameters(X_train, y_train):
     '''
     Find the optimal parameters for C and Kernel for a 
     '''
-    classifier =  SVC()
+    classifier =  SVC(probability=True)
    
 
     param_grid = {
@@ -167,9 +167,9 @@ def train_classifier(features, criteria, tune=False):
 
     if tune:
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
-        classifier = SVC(C=C, kernel=kernel)
+        classifier = SVC(C=C, kernel=kernel, probability=True)
     else:
-        classifier = SVC()
+        classifier = SVC(C=0.1, kernel='poly')
 
     print("Training started")
     classifier.fit(X_train, y_train)
@@ -208,17 +208,17 @@ def predict_single_speaker(classifier, audio_path):
     try:
         #prediction = classifier.predict([new_mfcc_features])
         #score = classifier.decision_function([new_mfcc_features])[0]
-        
+       
 
         #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
         
-        return classifier.predict_proba([new_mfcc_features])[0]
+        return 
     except Exception as e:
         print(e)
         return(None,False)
 
 
-model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", True))
+model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
 #train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")  
 #print(model1)
 #classifier = load_classifier("svc_model13_07_2023_21_03_prob.jl", from_models=True)
