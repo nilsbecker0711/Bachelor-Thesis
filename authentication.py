@@ -169,12 +169,13 @@ def train_classifier(features, criteria, tune=False):
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
         classifier = SVC(C=C, kernel=kernel, probability=True)
     else:
-        classifier = SVC(C=0.1, kernel='poly')
+        classifier = SVC(C=0.1, kernel='poly', probability=True)
 
     print("Training started")
     classifier.fit(X_train, y_train)
     print("Training finished")
     accuracy = classifier.score(X_test, y_test)
+    #params = [classifier.get_params(), accuracy]
     print("Classifier Accuracy: {:.2f}%".format(accuracy * 100))
 
     return classifier
@@ -220,16 +221,16 @@ def predict_single_speaker(classifier, audio_path):
         return(None,False)
 
 
-model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
+#model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
 #train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")  
 #print(model1)
-#classifier = load_classifier("svc_model13_07_2023_21_03_prob.jl", from_models=True)
+classifier = load_classifier("svc_model14_07_2023_00_24_prob_96.jl", from_models=True)
 
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
-#print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
+print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
+print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
 
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
