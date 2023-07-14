@@ -66,7 +66,11 @@ def save_classifier(classifier, speaker_id):
     try:
        now = datetime.now()
        date = now.strftime("%d_%m_%Y_%H_%M")
-       filename = os.path.join(dirname, f'models/svc_model{date}/{speaker_id}.jl')
+       try:
+        os.mkdir(os.path.join(dirname, f'models\\svc_model{date}'))
+       except: #directory already created
+           pass 
+       filename = os.path.join(dirname, f'models\\svc_model{date}\\{speaker_id}.jl')
        joblib.dump(classifier, filename )
        return filename
     except Exception as e:
@@ -90,24 +94,25 @@ def load_classifiers(path, from_models=False):
         print(e)
         return None
 
-def train_speaker_classification(data_path, audio_path, tune=False):
+def train_speaker_classification(data_path, audio_path, tune=False, save = True):
     '''
     Trains a SVC to differentiate between speakers.
     :param data_path: link to an excel file containing paths to audio files and distict speaker ID's
     :param audio_path: path to folder, where audio files are stored
     :param tune: Indicates if the SVC hyperparameters C and kernel should be optimized before training
+    :param save: Indicates if the model is to be saved
     :return: trained gender classifier
     '''
     data = os.path.join(dirname, data_path)
     voice_samples = pd.read_excel(data, usecols=[0,1])
-    speaker_number = 0
+
     speakers = []
     features = []
     
     print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
-        if index == 50:
-            break
+        if index == 150:
+           break
         speaker_ID, audio_path_detail = sample
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
         speakers.append(speaker_ID)
@@ -119,12 +124,17 @@ def train_speaker_classification(data_path, audio_path, tune=False):
     amount_counter = 0
     
     for speaker_number, amount in values.items():
+
         current_speaker = [0 for i in range(len(speakers))]
         for i in range(amount_counter, amount_counter+amount):
-            current_speaker[i] = speakers[i]
+            current_speaker[i] = 1
         amount_counter += amount
         print(current_speaker)
-        classifiers.append(train_classifier(features, current_speaker, tune))
+        classifier = train_classifier(features, current_speaker, tune)
+        classifiers.append(classifier)
+        
+        if save:
+            save_classifier(classifier, speaker_number)
    
     return classifiers
     
@@ -158,9 +168,7 @@ def train_classifier(features, criteria, tune=False):
     else:
         classifier = SVC(C=0.1, kernel='poly', probability=True)
 
-    print("Training started")
     classifier.fit(X_train, y_train)
-    print("Training finished")
     accuracy = classifier.score(X_test, y_test)
     #params = [classifier.get_params(), accuracy]
     print("Classifier Accuracy: {:.2f}%".format(accuracy * 100))
@@ -192,7 +200,7 @@ def predict_single_speaker(classifier, audio_path):
 
 
 #model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
-print(len(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")))
+train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")
 #print(model1)
 #classifier = load_classifier("svc_model14_07_2023_00_24_prob_96.jl", from_models=True)
 
