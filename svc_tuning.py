@@ -17,6 +17,7 @@ from collections import Counter
 
 dirname = os.path.dirname(__file__)
 
+
 def extract_mfcc(audio_path):
     '''
     This method extracts the mel frequency cepstral coefficients (mfcc) from a given path to an audio file
@@ -56,7 +57,7 @@ def plot_mel_spectrogram(audio_path):
     plt.tight_layout()
     plt.show()
 
-def save_classifier(classifier, speaker_id):
+def save_classifier(classifier, speaker_id, date):
     '''
     This method saves a given classifier to the models subfolder with current datetime as destinction method. The datetime format is D/M/Y_H_M
     :param classifier: classifier to save (As it is only SVC)
@@ -64,12 +65,6 @@ def save_classifier(classifier, speaker_id):
     '''
 
     try:
-       now = datetime.now()
-       date = now.strftime("%d_%m_%Y_%H_%M")
-       try:
-        os.mkdir(os.path.join(dirname, f'models\\svc_model{date}'))
-       except: #directory already created
-           pass 
        filename = os.path.join(dirname, f'models\\svc_model{date}\\{speaker_id}.jl')
        joblib.dump(classifier, filename )
        return filename
@@ -105,13 +100,18 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     '''
     data = os.path.join(dirname, data_path)
     voice_samples = pd.read_excel(data, usecols=[0,1])
+    date = None
+    if save:
+        now = datetime.now()
+        date = now.strftime("%d_%m_%Y_%H_%M")
+        os.mkdir(os.path.join(dirname, f'models\\svc_model{date}'))
 
     speakers = []
     features = []
     
     print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
-        if index == 150:
+        if index == 10:
            pass
         speaker_ID, audio_path_detail = sample
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
@@ -124,16 +124,20 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     amount_counter = 0
     
     for speaker_number, amount in values.items():
-
+        
         current_speaker = [0 for i in range(len(speakers))]
         for i in range(amount_counter, amount_counter+amount):
             current_speaker[i] = 1
         amount_counter += amount
-        classifier = train_classifier(features, current_speaker, tune)
+        try:
+            classifier = train_classifier(features, current_speaker, tune)
+        except:
+            print(speaker_number)
+            continue
         classifiers.append(classifier)
         
         if save:
-            save_classifier(classifier, speaker_number)
+            save_classifier(classifier, speaker_number, date)
    
     return classifiers
     
@@ -174,7 +178,7 @@ def train_classifier(features, criteria, tune=False):
 
     return classifier
 
-def predict_single_speaker(classifier, audio_path):
+def predict_single_speaker(classifiers, audio_path):
     '''
     Predict for a single sample who the speaker is
     :param classifier: a pretrained classifier 
@@ -183,31 +187,41 @@ def predict_single_speaker(classifier, audio_path):
              If an exception is raised -> A String with a short notice of the failed prediction, False
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
+    predictions = []
     try:
-        #prediction = classifier.predict([new_mfcc_features])
-        #score = classifier.decision_function([new_mfcc_features])[0]
-        pred = classifier.predict_proba([new_mfcc_features])[0]
-        decision = classifier.classes_[pred.argmax()]
-        highest_probability = pred.max()
+        for classifier in classifiers:
+            
+            predictions.append(classifier.predict([new_mfcc_features]))
+            
+            #score = classifier.decision_function([new_mfcc_features])[0]
+            #pred = classifier.predict_proba([new_mfcc_features])[0]
+            #decision = classifier.classes_[pred.argmax()]
+            #highest_probability = pred.max()
 
-        #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
-        
-        return decision, highest_probability
+            #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
+        indizes = []
+        for prediction in predictions:
+            if prediction[0] == 1:
+                indizes.append(predictions.index(prediction))
+        return indizes       
     except Exception as e:
         print(e)
         return(None,False)
 
 
 #model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
-train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")
+#train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")
 #print(model1)
-classifier = load_classifiers("svc_model14_07_2023_00_24", from_models=True)
+model_path = os.path.join(dirname, "models/svc_model15_07_2023_00_49")
+classifiers = []
+for filename in os.listdir(model_path):
+    #print(os.path.join(model_path, filename))
+    classifiers.append(load_classifiers(os.path.join(model_path, filename)))
 
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
-#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
-print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
+print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530279.mp3"))
+print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530332.mp3"))
+print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539775.mp3"))
+print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_1.wav"))
 
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
