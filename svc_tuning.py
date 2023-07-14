@@ -112,7 +112,7 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
         if index == 150:
-           break
+           pass
         speaker_ID, audio_path_detail = sample
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
         speakers.append(speaker_ID)
@@ -129,7 +129,6 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
         for i in range(amount_counter, amount_counter+amount):
             current_speaker[i] = 1
         amount_counter += amount
-        print(current_speaker)
         classifier = train_classifier(features, current_speaker, tune)
         classifiers.append(classifier)
         
@@ -202,13 +201,13 @@ def predict_single_speaker(classifier, audio_path):
 #model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
 train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")
 #print(model1)
-#classifier = load_classifier("svc_model14_07_2023_00_24_prob_96.jl", from_models=True)
+classifier = load_classifiers("svc_model14_07_2023_00_24", from_models=True)
 
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
 #print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
-#print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
 
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
