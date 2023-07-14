@@ -216,7 +216,7 @@ model_path = os.path.join(dirname, "models/svc_model15_07_2023_00_49")
 classifiers = []
 for filename in os.listdir(model_path):
     #print(os.path.join(model_path, filename))
-    classifiers.append(load_classifiers(os.path.join(model_path, filename)))
+    classifiers.append(load_classifiers(os.path.join(model_path, filename))) #Sorted Wrong way !!!!
 
 print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
 print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530279.mp3"))
