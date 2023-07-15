@@ -122,25 +122,38 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     values = Counter(speakers) #amount of speakers = 282
     classifiers = [] # holds all n classifiers for n distinct speakers
     amount_counter = 0
-    
+    counter = 0
     for speaker_number, amount in values.items():
-        
-        current_speaker = [0 for i in range(len(speakers))]
+        current_speaker = [0 for i in range(len(speakers))] #fill with zeros
         for i in range(amount_counter, amount_counter+amount):
             current_speaker[i] = 1
         amount_counter += amount
-        try:
-            classifier = train_classifier(features, current_speaker, tune)
-        except:
-            print(speaker_number)
-            continue
+        runner = True
+        runner_counter = 0
+        while runner:
+            try: #find invalid speaker data
+                classifier = train_classifier(features, current_speaker, tune)
+                runner = False
+            except Exception as e:
+                print(speaker_number, runner_counter)
+                runner_counter += 1
+                print(e)
+                runner = True
         classifiers.append(classifier)
         
         if save:
-            save_classifier(classifier, speaker_number, date)
-   
+            if counter < 10:
+                save_classifier(classifier, f'00{counter}-{speaker_number}', date)
+            elif counter < 100:
+                save_classifier(classifier, f'0{counter}-{speaker_number}', date)
+            else:
+                save_classifier(classifier, f'{counter}-{speaker_number}', date)
+            counter += 1
     return classifiers
     
+def add_classifier(model_path, audio_path, speaker_name): #TODO
+        for filename in os.listdir(audio_path):
+            features = extract_mfcc(filename)
 
 def tune_SVC_hyperparameters(X_train, y_train):
     '''
@@ -190,15 +203,16 @@ def predict_single_speaker(classifiers, audio_path):
     predictions = []
     try:
         for classifier in classifiers:
-            
             predictions.append(classifier.predict([new_mfcc_features]))
             
-            #score = classifier.decision_function([new_mfcc_features])[0]
+            score = classifier.decision_function([new_mfcc_features])[0]
+            print(score)
             #pred = classifier.predict_proba([new_mfcc_features])[0]
             #decision = classifier.classes_[pred.argmax()]
             #highest_probability = pred.max()
 
             #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
+        #print(predictions)
         indizes = []
         for prediction in predictions:
             if prediction[0] == 1:
@@ -208,20 +222,24 @@ def predict_single_speaker(classifiers, audio_path):
         print(e)
         return(None,False)
 
+def training(save):
 
-#model1 = save_classifier(train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/"))
-#train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")
-#print(model1)
-model_path = os.path.join(dirname, "models/svc_model15_07_2023_00_49")
-classifiers = []
-for filename in os.listdir(model_path):
-    #print(os.path.join(model_path, filename))
-    classifiers.append(load_classifiers(os.path.join(model_path, filename))) #Sorted Wrong way !!!!
+    train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", save = save)
 
-print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
-print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530279.mp3"))
-print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530332.mp3"))
-print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539775.mp3"))
-print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_1.wav"))
+def test():
+    model_path = os.path.join(dirname, "models/svc_model15_07_2023_17_17")
+    classifiers = []
+    counter = 0
+    for filename in os.listdir(model_path):
+        #print(os.path.join(model_path, filename))
+        classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
+    
+    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
+    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37071639.mp3"))
+    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37109797.mp3"))
+    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539775.mp3"))
+    print(predict_single_speaker(classifiers, "samples\Fides\Geräusch 04.wav"))
 
+test()
+#training(save=False)
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
