@@ -180,9 +180,9 @@ def train_classifier(features, criteria, tune=False):
 
     if tune:
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
-        classifier = SVC(C=C, kernel=kernel, probability=True)
+        classifier = SVC(C=C, kernel=kernel)
     else:
-        classifier = SVC(C=0.1, kernel='poly', probability=True)
+        classifier = SVC(C=0.1, kernel='poly')
 
     classifier.fit(X_train, y_train)
     accuracy = classifier.score(X_test, y_test)
@@ -201,22 +201,25 @@ def predict_single_speaker(classifiers, audio_path):
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     predictions = []
+
     try:
         for classifier in classifiers:
-            predictions.append(classifier.predict([new_mfcc_features]))
-            
-            score = classifier.decision_function([new_mfcc_features])[0]
-            print(score)
-            #pred = classifier.predict_proba([new_mfcc_features])[0]
-            #decision = classifier.classes_[pred.argmax()]
-            #highest_probability = pred.max()
-
-            #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
+            pred =  classifier.predict([new_mfcc_features])
+            if pred == 1:
+                print(classifier.decision_function([new_mfcc_features]))
+             #decision = classifier.classes_[pred.argmax()]
+             #print(pred)
+            predictions.append(pred)
+            #score = classifier.decision_function([new_mfcc_features])
+            #print(score)
         #print(predictions)
         indizes = []
+        index = 0
         for prediction in predictions:
-            if prediction[0] == 1:
-                indizes.append(predictions.index(prediction))
+            if (prediction == 1):
+                indizes.append(index)
+                #indizes.append(predictions.index(prediction))
+            index += 1
         return indizes       
     except Exception as e:
         print(e)
@@ -224,22 +227,68 @@ def predict_single_speaker(classifiers, audio_path):
 
 def training(save):
 
-    train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/", save = save)
+    train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/",tune=False, save = save)
 
 def test():
-    model_path = os.path.join(dirname, "models/svc_model15_07_2023_17_17")
+    model_path = os.path.join(dirname, "models/svc_model16_07_2023_19_16")
     classifiers = []
     counter = 0
     for filename in os.listdir(model_path):
+        #continue
         #print(os.path.join(model_path, filename))
         classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
-    
+
+        #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
+    samples = [
+        "common_voice_en_36730765.mp3",
+        "common_voice_en_36730766.mp3",
+        "common_voice_en_36730767.mp3",
+        "common_voice_en_36730769.mp3",
+        "common_voice_en_36730771.mp3",
+        "common_voice_en_36730773.mp3",
+        "common_voice_en_36730775.mp3",
+        "common_voice_en_36730777.mp3",
+        "common_voice_en_36730779.mp3",
+        "common_voice_en_36730780.mp3",
+        "common_voice_en_36730782.mp3",
+        "common_voice_en_36730783.mp3",
+        "common_voice_en_36730784.mp3",
+        "common_voice_en_36730786.mp3",
+        "common_voice_en_36730787.mp3",
+        "common_voice_en_36730790.mp3",
+        "common_voice_en_36730793.mp3",
+        "common_voice_en_36730794.mp3",
+        "common_voice_en_36730796.mp3",
+        "common_voice_en_36730797.mp3",
+        "common_voice_en_36730800.mp3",
+        "common_voice_en_36730804.mp3",
+        "common_voice_en_36730806.mp3",
+        "common_voice_en_36730809.mp3",
+        "common_voice_en_36730810.mp3",
+        "common_voice_en_36730812.mp3",
+        "common_voice_en_36730813.mp3",
+        "common_voice_en_36730814.mp3",
+        "common_voice_en_36730816.mp3",
+        "common_voice_en_36730818.mp3",
+        "common_voice_en_36730824.mp3",
+        "common_voice_en_36730825.mp3",
+        "common_voice_en_36730827.mp3",
+        "common_voice_en_36730829.mp3",
+        "common_voice_en_36730832.mp3",
+        "common_voice_en_36730833.mp3",
+        "common_voice_en_36730834.mp3",
+        "common_voice_en_36730835.mp3"]
+
+    for sample in samples:
+        
+        print(predict_single_speaker(classifiers, f"samples\commonvoice\{sample}"))
+
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37071639.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37109797.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539775.mp3"))
-    print(predict_single_speaker(classifiers, "samples\Fides\Geräusch 04.wav"))
+    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539618.mp3"))
+    #print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_2.wav"))
 
 test()
-#training(save=False)
+#training(save=True)
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
