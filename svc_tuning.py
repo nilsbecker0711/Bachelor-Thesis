@@ -182,7 +182,7 @@ def train_classifier(features, criteria, tune=False):
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
         classifier = SVC(C=C, kernel=kernel)
     else:
-        classifier = SVC(C=0.1, kernel='poly')
+        classifier = SVC(C=0.1, kernel='poly', probability=True)
 
     classifier.fit(X_train, y_train)
     accuracy = classifier.score(X_test, y_test)
@@ -191,36 +191,38 @@ def train_classifier(features, criteria, tune=False):
 
     return classifier
 
-def predict_single_speaker(classifiers, audio_path):
+def predict_single_speaker(classifiers, audio_path, proba=False):
     '''
     Predict for a single sample who the speaker is
     :param classifier: a pretrained classifier 
     :param audio_path: path to the audio file to be classified
+    :param proba = indicates if the input SVCs are trained for probabilities
     :return: If no exception is raised -> A String with the name of the sample and the predicted speaker, True
              If an exception is raised -> A String with a short notice of the failed prediction, False
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     predictions = []
-
+    indizes = []
+    index = 0
     try:
         for classifier in classifiers:
-            pred =  classifier.predict([new_mfcc_features])
-            if pred == 1:
-                print(classifier.decision_function([new_mfcc_features]))
-             #decision = classifier.classes_[pred.argmax()]
-             #print(pred)
+            if proba:
+                pred = classifier.predict_proba([new_mfcc_features])[0]
+                print(pred, index)
+                #indizes.append(index)
+                #print(pred.max())
+            else:
+                pred =  classifier.predict([new_mfcc_features])[0]
+                if pred == 1:
+                    indizes.append([index, classifier.decision_function([new_mfcc_features])[0]])
             predictions.append(pred)
-            #score = classifier.decision_function([new_mfcc_features])
-            #print(score)
-        #print(predictions)
-        indizes = []
-        index = 0
-        for prediction in predictions:
-            if (prediction == 1):
-                indizes.append(index)
-                #indizes.append(predictions.index(prediction))
             index += 1
-        return indizes       
+        if (len(indizes) > 1):
+            indizes.sort(key = lambda x: x[1], reverse=True)
+            return indizes[0]
+        elif(len(indizes) == 1):
+            return indizes[0]
+        else: return None
     except Exception as e:
         print(e)
         return(None,False)
@@ -229,7 +231,7 @@ def training(save):
 
     train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/",tune=False, save = save)
 
-def test():
+def test(prob):
     model_path = os.path.join(dirname, "models/svc_model16_07_2023_19_16")
     classifiers = []
     counter = 0
@@ -240,55 +242,57 @@ def test():
 
         #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
     samples = [
-        "common_voice_en_36730765.mp3",
-        "common_voice_en_36730766.mp3",
-        "common_voice_en_36730767.mp3",
-        "common_voice_en_36730769.mp3",
-        "common_voice_en_36730771.mp3",
-        "common_voice_en_36730773.mp3",
-        "common_voice_en_36730775.mp3",
-        "common_voice_en_36730777.mp3",
-        "common_voice_en_36730779.mp3",
-        "common_voice_en_36730780.mp3",
-        "common_voice_en_36730782.mp3",
-        "common_voice_en_36730783.mp3",
-        "common_voice_en_36730784.mp3",
-        "common_voice_en_36730786.mp3",
-        "common_voice_en_36730787.mp3",
-        "common_voice_en_36730790.mp3",
-        "common_voice_en_36730793.mp3",
-        "common_voice_en_36730794.mp3",
-        "common_voice_en_36730796.mp3",
-        "common_voice_en_36730797.mp3",
-        "common_voice_en_36730800.mp3",
-        "common_voice_en_36730804.mp3",
-        "common_voice_en_36730806.mp3",
-        "common_voice_en_36730809.mp3",
-        "common_voice_en_36730810.mp3",
-        "common_voice_en_36730812.mp3",
-        "common_voice_en_36730813.mp3",
-        "common_voice_en_36730814.mp3",
-        "common_voice_en_36730816.mp3",
-        "common_voice_en_36730818.mp3",
-        "common_voice_en_36730824.mp3",
-        "common_voice_en_36730825.mp3",
-        "common_voice_en_36730827.mp3",
-        "common_voice_en_36730829.mp3",
-        "common_voice_en_36730832.mp3",
-        "common_voice_en_36730833.mp3",
-        "common_voice_en_36730834.mp3",
-        "common_voice_en_36730835.mp3"]
+        "common_voice_en_37007558.mp3",
+        "common_voice_en_37007560.mp3",
+        "common_voice_en_37007561.mp3",
+        "common_voice_en_37007562.mp3",
+        "common_voice_en_37010899.mp3",
+        "common_voice_en_37010900.mp3",
+        "common_voice_en_37010901.mp3",
+        "common_voice_en_37010902.mp3",
+        "common_voice_en_37010907.mp3",
+        "common_voice_en_37010908.mp3",
+        "common_voice_en_37010909.mp3",
+        "common_voice_en_37010911.mp3",
+        "common_voice_en_37010914.mp3",
+        "common_voice_en_37010918.mp3",
+        "common_voice_en_37010923.mp3",
+        "common_voice_en_37010924.mp3",
+        "common_voice_en_37010926.mp3",
+        "common_voice_en_37010928.mp3",
+        "common_voice_en_37010929.mp3",
+        "common_voice_en_37010930.mp3",
+        "common_voice_en_37010934.mp3",
+        "common_voice_en_37010935.mp3",
+        "common_voice_en_37010936.mp3",
+        "common_voice_en_37010938.mp3",
+        "common_voice_en_37010946.mp3",
+        "common_voice_en_37010947.mp3",
+        "common_voice_en_37010948.mp3",
+        "common_voice_en_37010949.mp3",
+        "common_voice_en_37010950.mp3",
+        "common_voice_en_37010951.mp3",
+        "common_voice_en_37010952.mp3",
+        "common_voice_en_37010954.mp3",
+        "common_voice_en_37010956.mp3",
+        "common_voice_en_37010957.mp3",
+        "common_voice_en_37010958.mp3",
+        "common_voice_en_37010960.mp3"]
+    samples2= [
+        "common_voice_en_36905614.mp3",
+        "common_voice_en_36905616.mp3"
+    ]
 
-    for sample in samples:
-        
-        print(predict_single_speaker(classifiers, f"samples\commonvoice\{sample}"))
-
+    for sample in samples2:
+        #break
+        print(predict_single_speaker(classifiers, f"samples\commonvoice\{sample}", proba=prob))
+        #break
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37071639.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37109797.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539618.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_2.wav"))
+    print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_2.wav", proba=prob))
 
-test()
+test(False)
 #training(save=True)
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
