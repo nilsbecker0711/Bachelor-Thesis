@@ -206,12 +206,15 @@ def predict_single_speaker(classifier, audio_path):
         #prediction = classifier.predict([new_mfcc_features])
         #score = classifier.decision_function([new_mfcc_features])[0]
         pred = classifier.predict_proba([new_mfcc_features])[0]
+        pred_sorted = sorted(pred, reverse = True)
         decision = classifier.classes_[pred.argmax()]
         highest_probability = pred.max()
 
         #print(f"{audio_path} is a sample of a {prediction[0]}, score: {np.mean(np.abs(norm_decision_distance))}", True)
-        
-        return decision, highest_probability
+        if (pred_sorted[1]*2) < pred_sorted[0]:
+            return decision, highest_probability
+        else:
+            return None
     except Exception as e:
         print(e)
         return(None,False)
@@ -221,12 +224,56 @@ def predict_single_speaker(classifier, audio_path):
 #train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/")  
 #print(model1)
 classifier = load_classifier("svc_model14_07_2023_00_24_prob_96.jl", from_models=True)
+samples = [
+        "common_voice_en_36730765.mp3",
+        "common_voice_en_36730766.mp3",
+        "common_voice_en_36730767.mp3",
+        "common_voice_en_36730769.mp3",
+        "common_voice_en_36730771.mp3",
+        "common_voice_en_36730773.mp3",
+        "common_voice_en_36730775.mp3",
+        "common_voice_en_36730777.mp3",
+        "common_voice_en_36730779.mp3",
+        "common_voice_en_36730780.mp3",
+        "common_voice_en_36730782.mp3",
+        "common_voice_en_36730783.mp3",
+        "common_voice_en_36730784.mp3",
+        "common_voice_en_36730786.mp3",
+        "common_voice_en_36730787.mp3",
+        "common_voice_en_36730790.mp3",
+        "common_voice_en_36730793.mp3",
+        "common_voice_en_36730794.mp3",
+        "common_voice_en_36730796.mp3",
+        "common_voice_en_36730797.mp3",
+        "common_voice_en_36730800.mp3",
+        "common_voice_en_36730804.mp3",
+        "common_voice_en_36730806.mp3",
+        "common_voice_en_36730809.mp3",
+        "common_voice_en_36730810.mp3",
+        "common_voice_en_36730812.mp3",
+        "common_voice_en_36730813.mp3",
+        "common_voice_en_36730814.mp3",
+        "common_voice_en_36730816.mp3",
+        "common_voice_en_36730818.mp3",
+        "common_voice_en_36730824.mp3",
+        "common_voice_en_36730825.mp3",
+        "common_voice_en_36730827.mp3",
+        "common_voice_en_36730829.mp3",
+        "common_voice_en_36730831.mp3",
+        "common_voice_en_36730832.mp3",
+        "common_voice_en_36730833.mp3",
+        "common_voice_en_36730834.mp3",
+        "common_voice_en_36730835.mp3"]
 
-print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
-print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
-print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
-print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
-print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36539775.mp3"))
-print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+for sample in samples:
+    
+    print(predict_single_speaker(classifier, f"samples\commonvoice\{sample}"))
 
+#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530278.mp3"))
+#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530279.mp3"))
+#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530332.mp3"))
+#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36530338.mp3"))
+#print(predict_single_speaker(classifier, "samples\commonvoice\common_voice_en_36730835.mp3"))
+#print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_1.wav"))
+#print(predict_single_speaker(classifier, "samples\cloned\Sample_Nils_2.wav"))
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
