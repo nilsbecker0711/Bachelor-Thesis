@@ -368,19 +368,15 @@ def test(prob):
     for sample in samples3:
         prediction = predict_single_speaker(classifiers, f"samples\{sample}", proba=prob)
         predictions.append(prediction)
-        #break
- 
     workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
     worksheet = workbook.active
     speakers = []
-    #print(predictions)
     for pred in predictions:
         rows = 1
         for row in worksheet.iter_rows(values_only=True):
             cell = worksheet.cell(row=rows, column=3)
 
             if (pred != None) and (int(cell.value[:3]) == pred[0]):
-                #print(pred)
                 speakers.append(worksheet.cell(row=rows, column=1).value)
                 break
             rows+=1
@@ -388,39 +384,14 @@ def test(prob):
     for speaker in speakers:
         print(f'{samples3[i]} is a sample of: {speaker}')
         i += 1
-    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37071639.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37109797.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539618.mp3"))
-    #print(predict_single_speaker(classifiers, "samples\Fides\Geräusch 01.wav", proba=prob))
+    
+
+
+#Code Test
 
 #add_classifier(speaker_name = "Fides", audio_path = "samples/Fides/", date = "16_07_2023_19_16", tune = False)
 #str = "012-37229"
 #print(int(str[:3]))
-test(False)
+#test(False)
 #training(save=True)
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
-
-
-
-#print(string[4:len(string)-3])
-'''
-models = []
-model_path = os.path.join(dirname, "models/svc_model16_07_2023_19_16")
-for filename in os.listdir(model_path):
-    if filename[len(filename)-2:] == "jl":
-        #print(filename[4:len(filename)-3])
-        models.append(filename)
-workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
-worksheet = workbook.active
-rows = 1
-for row in worksheet.iter_rows(values_only=True):
-    for model in models:
-        if (model[4:len(model)-3]) == row[0]:
-            cell = worksheet.cell(row=rows, column=3)
-            cell.value = model
-    rows += 1
-workbook.save(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))           
-workbook.close() 
-'''
- 
