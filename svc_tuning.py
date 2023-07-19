@@ -8,6 +8,7 @@ import pandas as pd
 import joblib
 import os
 from datetime import datetime
+import openpyxl
 import logging
 from collections import Counter
 
@@ -102,18 +103,21 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     voice_samples = pd.read_excel(data, usecols=[0,1])
     date = None
     if save:
+        svc_paths =[]
         now = datetime.now()
         date = now.strftime("%d_%m_%Y_%H_%M")
         os.mkdir(os.path.join(dirname, f'models\\svc_model{date}'))
 
     speakers = []
     features = []
+    audio_paths = []
     
     print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
         if index == 10:
            pass
         speaker_ID, audio_path_detail = sample
+        audio_paths.append(audio_path+audio_path_detail)
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
         speakers.append(speaker_ID)
         features.append(mfcc_features)  
@@ -142,18 +146,76 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
         classifiers.append(classifier)
         
         if save:
+            
             if counter < 10:
-                save_classifier(classifier, f'00{counter}-{speaker_number}', date)
+                svc_path = f'00{counter}-{speaker_number}'
+                svc_paths.append(svc_path)
             elif counter < 100:
-                save_classifier(classifier, f'0{counter}-{speaker_number}', date)
+                svc_paths.append(svc_path)
             else:
-                save_classifier(classifier, f'{counter}-{speaker_number}', date)
+                svc_path = f'{counter}-{speaker_number}'
+                svc_paths.append(svc_path)
+            save_classifier(classifier, svc_path, date)
             counter += 1
-    return classifiers
+    if save:
+        return classifiers, speakers, svc_paths, audio_paths
+    else:
+        return classifiers
     
-def add_classifier(model_path, audio_path, speaker_name): #TODO
+def add_classifier(audio_path, speaker_name, tune, date): #TODO
+        features = []
+        speaker_features =[]
+        audio_paths = []
         for filename in os.listdir(audio_path):
-            features = extract_mfcc(filename)
+            audio_paths.append(audio_path+filename)
+            feature,_,_ = extract_mfcc(audio_path+filename)
+            features.append(feature)
+            speaker_features.append(1)
+        
+        data = os.path.join(dirname, f"models/svc_model{date}/data.xlsx")
+        workbook = openpyxl.load_workbook(data)
+        worksheet = workbook.active
+        speaker_number = int(worksheet.cell(row=worksheet.max_row, column=3).value[:3]) + 1
+        voice_samples = pd.read_excel(data, usecols=[0,1])
+        for index, sample in voice_samples.iterrows():
+            speaker_id, audio_path_detail = sample
+            mfcc_features, sr, path = extract_mfcc(f'samples/{audio_path_detail}')
+            speaker_features.append(0)
+            features.append(mfcc_features)
+
+        runner = True
+        classifier = None
+        svc_path = None
+        while runner:
+            try:
+                classifier = train_classifier(features, speaker_features, tune) 
+                svc_path = f'{speaker_number}-{speaker_name}'
+                save_classifier(classifier, svc_path, date)
+                runner = False
+            except:
+                runner = True
+       
+        #update excel
+        workbook = openpyxl.load_workbook(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
+        worksheet = workbook.active
+        for audio_path in audio_paths:
+            data = [speaker_name, audio_path[8:], f'{svc_path}.jl']
+            worksheet.append(data)
+        workbook.save(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
+        workbook.close()
+        return classifier
+
+def build_svc_excel(date, speakers, audio_paths, svc_paths):
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    i = 0
+    data = []
+    for i in range(len(speakers)):
+        data.append([speakers[i], audio_paths[i], svc_paths[i]])
+    for row_data in data:
+        worksheet.append(row_data)
+    workbook.save(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
+    workbook.close()
 
 def tune_SVC_hyperparameters(X_train, y_train):
     '''
@@ -182,7 +244,7 @@ def train_classifier(features, criteria, tune=False):
         C, kernel = tune_SVC_hyperparameters(X_train, y_train)
         classifier = SVC(C=C, kernel=kernel)
     else:
-        classifier = SVC(C=0.1, kernel='poly', probability=True)
+        classifier = SVC(C=0.1, kernel='poly')
 
     classifier.fit(X_train, y_train)
     accuracy = classifier.score(X_test, y_test)
@@ -217,8 +279,9 @@ def predict_single_speaker(classifiers, audio_path, proba=False):
                     indizes.append([index, classifier.decision_function([new_mfcc_features])[0]])
             predictions.append(pred)
             index += 1
+        #print(indizes)
         if (len(indizes) > 1):
-            indizes.sort(key = lambda x: x[1], reverse=True)
+            indizes.sort(key = lambda x: abs(x[1] - 1))
             return indizes[0]
         elif(len(indizes) == 1):
             return indizes[0]
@@ -238,61 +301,126 @@ def test(prob):
     for filename in os.listdir(model_path):
         #continue
         #print(os.path.join(model_path, filename))
-        classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
+        if filename[len(filename)-2:] == "jl":#only take models
+            classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
 
-        #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
+    #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
     samples = [
-        "common_voice_en_37007558.mp3",
-        "common_voice_en_37007560.mp3",
-        "common_voice_en_37007561.mp3",
-        "common_voice_en_37007562.mp3",
-        "common_voice_en_37010899.mp3",
-        "common_voice_en_37010900.mp3",
-        "common_voice_en_37010901.mp3",
-        "common_voice_en_37010902.mp3",
-        "common_voice_en_37010907.mp3",
-        "common_voice_en_37010908.mp3",
-        "common_voice_en_37010909.mp3",
-        "common_voice_en_37010911.mp3",
-        "common_voice_en_37010914.mp3",
-        "common_voice_en_37010918.mp3",
-        "common_voice_en_37010923.mp3",
-        "common_voice_en_37010924.mp3",
-        "common_voice_en_37010926.mp3",
-        "common_voice_en_37010928.mp3",
-        "common_voice_en_37010929.mp3",
-        "common_voice_en_37010930.mp3",
-        "common_voice_en_37010934.mp3",
-        "common_voice_en_37010935.mp3",
-        "common_voice_en_37010936.mp3",
-        "common_voice_en_37010938.mp3",
-        "common_voice_en_37010946.mp3",
-        "common_voice_en_37010947.mp3",
-        "common_voice_en_37010948.mp3",
-        "common_voice_en_37010949.mp3",
-        "common_voice_en_37010950.mp3",
-        "common_voice_en_37010951.mp3",
-        "common_voice_en_37010952.mp3",
-        "common_voice_en_37010954.mp3",
-        "common_voice_en_37010956.mp3",
-        "common_voice_en_37010957.mp3",
-        "common_voice_en_37010958.mp3",
-        "common_voice_en_37010960.mp3"]
+        "commonvoice/common_voice_en_37007558.mp3",
+        "commonvoice/common_voice_en_37007560.mp3",
+        "commonvoice/common_voice_en_37007561.mp3",
+        "commonvoice/common_voice_en_37007562.mp3",
+        "commonvoice/common_voice_en_37010899.mp3",
+        "commonvoice/common_voice_en_37010900.mp3",
+        "commonvoice/common_voice_en_37010901.mp3",
+        "commonvoice/common_voice_en_37010902.mp3",
+        "commonvoice/common_voice_en_37010907.mp3",
+        "commonvoice/common_voice_en_37010908.mp3",
+        "commonvoice/common_voice_en_37010909.mp3",
+        "commonvoice/common_voice_en_37010911.mp3",
+        "commonvoice/common_voice_en_37010914.mp3",
+        "commonvoice/common_voice_en_37010918.mp3",
+        "commonvoice/common_voice_en_37010923.mp3",
+        "commonvoice/common_voice_en_37010924.mp3",
+        "commonvoice/common_voice_en_37010926.mp3",
+        "commonvoice/common_voice_en_37010928.mp3",
+        "commonvoice/common_voice_en_37010929.mp3",
+        "commonvoice/common_voice_en_37010930.mp3",
+        "commonvoice/common_voice_en_37010934.mp3",
+        "commonvoice/common_voice_en_37010935.mp3",
+        "commonvoice/common_voice_en_37010936.mp3",
+        "commonvoice/common_voice_en_37010938.mp3",
+        "commonvoice/common_voice_en_37010946.mp3",
+        "commonvoice/common_voice_en_37010947.mp3",
+        "commonvoice/common_voice_en_37010948.mp3",
+        "commonvoice/common_voice_en_37010949.mp3",
+        "commonvoice/common_voice_en_37010950.mp3",
+        "commonvoice/common_voice_en_37010951.mp3",
+        "commonvoice/common_voice_en_37010952.mp3",
+        "commonvoice/common_voice_en_37010954.mp3",
+        "commonvoice/common_voice_en_37010956.mp3",
+        "commonvoice/common_voice_en_37010957.mp3",
+        "commonvoice/common_voice_en_37010958.mp3",
+        "commonvoice/common_voice_en_37010960.mp3"]
     samples2= [
-        "common_voice_en_36905614.mp3",
-        "common_voice_en_36905616.mp3"
+        "commonvoice/common_voice_en_36905614.mp3",
+        "commonvoice/common_voice_en_36905616.mp3"
     ]
+    samples3 = [
+        "Fides/Geräusch 01.wav",
+        "Fides/Geräusch 02.wav",
+        "Fides/Geräusch 03.wav",
+        "Fides/Geräusch 04.wav",
+        "Fides/Geräusch 05.wav",
+        "Fides/Geräusch 06.wav",
+        "Fides/Geräusch 07.wav",
+        "Fides/Geräusch 08.wav",
+        "Fides/Geräusch 09.wav",
+        "Fides/Geräusch 10.wav",
+        "Fides/Geräusch 11.wav",
+        "Fides/Geräusch 12.wav",
+        "Fides/Geräusch 13.wav",
+        "Fides/Geräusch 14.wav",
+        "Fides/Geräusch 15.wav",
+        "Fides/Geräusch 16.wav"
+    ]
+    predictions = []
+    for sample in samples3:
+        prediction = predict_single_speaker(classifiers, f"samples\{sample}", proba=prob)
+        predictions.append(prediction)
+        #break
+ 
+    workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
+    worksheet = workbook.active
+    speakers = []
+    #print(predictions)
+    for pred in predictions:
+        rows = 1
+        for row in worksheet.iter_rows(values_only=True):
+            cell = worksheet.cell(row=rows, column=3)
 
-    for sample in samples2:
-        #break
-        print(predict_single_speaker(classifiers, f"samples\commonvoice\{sample}", proba=prob))
-        #break
+            if (pred != None) and (int(cell.value[:3]) == pred[0]):
+                #print(pred)
+                speakers.append(worksheet.cell(row=rows, column=1).value)
+                break
+            rows+=1
+    i = 0
+    for speaker in speakers:
+        print(f'{samples3[i]} is a sample of: {speaker}')
+        i += 1
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36530278.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37071639.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_37109797.mp3"))
     #print(predict_single_speaker(classifiers, "samples\commonvoice\common_voice_en_36539618.mp3"))
-    print(predict_single_speaker(classifiers, "samples\cloned\Sample_Nils_2.wav", proba=prob))
+    #print(predict_single_speaker(classifiers, "samples\Fides\Geräusch 01.wav", proba=prob))
 
+#add_classifier(speaker_name = "Fides", audio_path = "samples/Fides/", date = "16_07_2023_19_16", tune = False)
+#str = "012-37229"
+#print(int(str[:3]))
 test(False)
 #training(save=True)
 #plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
+
+
+
+#print(string[4:len(string)-3])
+'''
+models = []
+model_path = os.path.join(dirname, "models/svc_model16_07_2023_19_16")
+for filename in os.listdir(model_path):
+    if filename[len(filename)-2:] == "jl":
+        #print(filename[4:len(filename)-3])
+        models.append(filename)
+workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
+worksheet = workbook.active
+rows = 1
+for row in worksheet.iter_rows(values_only=True):
+    for model in models:
+        if (model[4:len(model)-3]) == row[0]:
+            cell = worksheet.cell(row=rows, column=3)
+            cell.value = model
+    rows += 1
+workbook.save(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))           
+workbook.close() 
+'''
+ 
