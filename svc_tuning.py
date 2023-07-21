@@ -123,7 +123,7 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
         features.append(mfcc_features)  
     print(f"Feature Extraction completed: {datetime.now()}")
 
-    values = Counter(speakers) #amount of speakers = 282
+    values = Counter(speakers) 
     classifiers = [] # holds all n classifiers for n distinct speakers
     amount_counter = 0
     counter = 0
@@ -282,6 +282,7 @@ def predict_single_speaker(classifiers, audio_path, proba=False):
         #print(indizes)
         if (len(indizes) > 1):
             indizes.sort(key = lambda x: abs(x[1] - 1))
+            print(indizes)
             return indizes[0]
         elif(len(indizes) == 1):
             return indizes[0]
@@ -304,6 +305,8 @@ def test(prob):
         if filename[len(filename)-2:] == "jl":#only take models
             classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
 
+    
+    #print(predict_single_speaker(classifiers, f"samples\cloned\Sample16.wav", proba=prob ))
     #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
     samples = [
         "commonvoice/common_voice_en_37007558.mp3",
@@ -364,8 +367,50 @@ def test(prob):
         "Fides/Geräusch 15.wav",
         "Fides/Geräusch 16.wav"
     ]
+    samples4=[
+        "Nils/Sample1.wav",
+        "Nils/Sample10.wav",
+        "Nils/Sample11.wav",
+        "Nils/Sample12.wav",
+        "Nils/Sample13.wav",
+        "Nils/Sample14.wav",
+        "Nils/Sample15.wav",
+        "Nils/Sample16.wav",
+        "Nils/Sample17.wav",
+        "Nils/Sample18.wav",
+        "Nils/Sample19.wav",
+        "Nils/Sample2.wav",
+        "Nils/Sample20.wav",
+        "Nils/Sample21.wav",
+        "Nils/Sample22.wav",
+        "Nils/Sample23.wav",
+        "Nils/Sample3.wav",
+        "Nils/Sample4.wav",
+        "Nils/Sample5.wav",
+        "Nils/Sample6.wav",
+        "Nils/Sample7.wav",
+        "Nils/Sample8.wav",
+        "Nils/Sample9.wav"
+    ]
+    samples5=[
+        "cloned\Sample1.wav",
+        "cloned\Sample2.wav",
+        "cloned\Sample3.wav",
+        "cloned\Sample4.wav",
+        "cloned\Sample5.wav",
+        "cloned\Sample6.wav",
+        "cloned\Sample7.wav",
+        "cloned\Sample8.wav",
+        "cloned\Sample9.wav",
+        "cloned\Sample10.wav",
+        "cloned\Sample11.wav",
+        "cloned\Sample12.wav",
+        "cloned\Sample13.wav",
+        "cloned\Sample14.wav",
+        "cloned\Sample15.wav"
+    ]
     predictions = []
-    for sample in samples3:
+    for sample in samples5:
         prediction = predict_single_speaker(classifiers, f"samples\{sample}", proba=prob)
         predictions.append(prediction)
     workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
@@ -382,16 +427,17 @@ def test(prob):
             rows+=1
     i = 0
     for speaker in speakers:
-        print(f'{samples3[i]} is a sample of: {speaker}')
+        print(f'{samples5[i]} is a sample of: {speaker}')
         i += 1
     
 
 
 #Code Test
 
-#add_classifier(speaker_name = "Fides", audio_path = "samples/Fides/", date = "16_07_2023_19_16", tune = False)
+#add_classifier(speaker_name = "Nils", audio_path = "samples/Nils/", date = "16_07_2023_19_16", tune = False)
 #str = "012-37229"
 #print(int(str[:3]))
 #test(False)
 #training(save=True)
-#plot_mel_spectrogram("samples\commonvoice\common_voice_en_36539775.mp3")
+
+#plot_mel_spectrogram("samples\\cloned\\sample16.wav")
