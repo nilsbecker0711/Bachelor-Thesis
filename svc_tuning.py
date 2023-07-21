@@ -36,7 +36,6 @@ def extract_mfcc(audio_path):
 
     return mfcc_mean_normalized, sr, audio
 
-
 def plot_mel_spectrogram(audio_path):
     
     '''
@@ -114,14 +113,30 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
     
     print(f"Feature Extraction started: {datetime.now()}")
     for index, sample in voice_samples.iterrows():
+        if index == 1500:
+            pass
         speaker_ID, audio_path_detail = sample
         audio_paths.append(audio_path+audio_path_detail)
         mfcc_features, sr, path = extract_mfcc(audio_path+audio_path_detail)
         speakers.append(speaker_ID)
         features.append(mfcc_features)  
     print(f"Feature Extraction completed: {datetime.now()}")
+    
+    ''' Filter out speakers with n<5 samples
+    values = Counter(speakers)
+    undo = []
+    for speaker_number, amount in values.items(): 
+        if amount < 5:
+            for index, value in enumerate(speakers):
+                if value == f'{speaker_number}':
+                    undo.append(index)
+    undo = sorted(undo, reverse=True)
+    for delete in undo:
+        speakers.pop(delete)
+        features.pop(delete)
+   '''
 
-    values = Counter(speakers) 
+    values = Counter(speakers)
     classifiers = [] # holds all n classifiers for n distinct speakers
     amount_counter = 0
     counter = 0
@@ -149,6 +164,7 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
                 svc_path = f'00{counter}-{speaker_number}'
                 svc_paths.append(svc_path)
             elif counter < 100:
+                svc_path = f'0{counter}-{speaker_number}'
                 svc_paths.append(svc_path)
             else:
                 svc_path = f'{counter}-{speaker_number}'
@@ -156,6 +172,8 @@ def train_speaker_classification(data_path, audio_path, tune=False, save = True)
             save_classifier(classifier, svc_path, date)
             counter += 1
     if save:
+
+        build_svc_excel(date = date, speakers=speakers, audio_paths=audio_paths, svc_paths=svc_paths)
         return classifiers, speakers, svc_paths, audio_paths
     else:
         return classifiers
@@ -233,12 +251,15 @@ def add_classifier(audio_path, speaker_name, tune, date): #TODO
         return classifier
 
 def build_svc_excel(date, speakers, audio_paths, svc_paths):
+    
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
-    i = 0
     data = []
+    svc_index = 0
     for i in range(len(speakers)):
-        data.append([speakers[i], audio_paths[i], svc_paths[i]])
+        if (i > 1) and (speakers[i] != speakers[i-1]):
+            svc_index += 1
+        data.append([speakers[i], audio_paths[i], svc_paths[svc_index]])
     for row_data in data:
         worksheet.append(row_data)
     workbook.save(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
@@ -311,12 +332,14 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
                     indizes.append([index, classifier.decision_function([new_mfcc_features])[0]])
             predictions.append(pred)
             index += 1
-        #print(indizes)
+        
         if (len(indizes) > 1):
-            indizes.sort(key = lambda x: abs(x[1] - 1))
-            #print(indizes)
-            return indizes[0]
+            #indizes.sort(key = lambda x: abs(x[1] - 1))
+            indizes.sort(key = lambda x: x[1], reverse=True)
+            print(indizes)
+            return (indizes[0], True)
         elif(len(indizes) == 1):
+           
             return (indizes[0], True)
         else: return ("Not found", False)
     except Exception as e:
@@ -325,61 +348,33 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
 
 def training(save):
 
-    train_speaker_classification("samples\commonvoice\info\Filtered.xlsx", "samples/commonvoice/",tune=False, save = save)
+    train_speaker_classification("models\svc_model16_07_2023_19_16\data.xlsx", "samples/", tune=False, save = save)
 
 def train_clone():
     train_clone_classifier("samples\\cloned\\", "samples\\", "models/svc_model16_07_2023_19_16/data.xlsx")
 
 def test(prob):
-    model_path = os.path.join(dirname, "models/svc_model16_07_2023_19_16")
+    model_path = os.path.join(dirname, "models/svc_model21_07_2023_22_27")
     classifiers = []
     clone_clf = load_classifiers(os.path.join(dirname, "models/svc_model21_07_2023_18_01/clone.jl"))
+
     for filename in os.listdir(model_path):
         #continue
         #print(os.path.join(model_path, filename))
         if filename[len(filename)-2:] == "jl":#only take models
             classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
-
     
     #print(predict_single_speaker(classifiers, f"samples/test/clone2.wav", proba=prob ))
     #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
     samples = [
-        "commonvoice/common_voice_en_37007558.mp3",
-        "commonvoice/common_voice_en_37007560.mp3",
-        "commonvoice/common_voice_en_37007561.mp3",
-        "commonvoice/common_voice_en_37007562.mp3",
-        "commonvoice/common_voice_en_37010899.mp3",
-        "commonvoice/common_voice_en_37010900.mp3",
-        "commonvoice/common_voice_en_37010901.mp3",
-        "commonvoice/common_voice_en_37010902.mp3",
-        "commonvoice/common_voice_en_37010907.mp3",
-        "commonvoice/common_voice_en_37010908.mp3",
-        "commonvoice/common_voice_en_37010909.mp3",
-        "commonvoice/common_voice_en_37010911.mp3",
-        "commonvoice/common_voice_en_37010914.mp3",
-        "commonvoice/common_voice_en_37010918.mp3",
-        "commonvoice/common_voice_en_37010923.mp3",
-        "commonvoice/common_voice_en_37010924.mp3",
-        "commonvoice/common_voice_en_37010926.mp3",
-        "commonvoice/common_voice_en_37010928.mp3",
-        "commonvoice/common_voice_en_37010929.mp3",
-        "commonvoice/common_voice_en_37010930.mp3",
-        "commonvoice/common_voice_en_37010934.mp3",
-        "commonvoice/common_voice_en_37010935.mp3",
-        "commonvoice/common_voice_en_37010936.mp3",
-        "commonvoice/common_voice_en_37010938.mp3",
-        "commonvoice/common_voice_en_37010946.mp3",
-        "commonvoice/common_voice_en_37010947.mp3",
-        "commonvoice/common_voice_en_37010948.mp3",
-        "commonvoice/common_voice_en_37010949.mp3",
-        "commonvoice/common_voice_en_37010950.mp3",
-        "commonvoice/common_voice_en_37010951.mp3",
-        "commonvoice/common_voice_en_37010952.mp3",
-        "commonvoice/common_voice_en_37010954.mp3",
-        "commonvoice/common_voice_en_37010956.mp3",
-        "commonvoice/common_voice_en_37010957.mp3",
-        "commonvoice/common_voice_en_37010958.mp3",
-        "commonvoice/common_voice_en_37010960.mp3"]
+        "commonvoice/common_voice_en_36829540.mp3",
+        "commonvoice/common_voice_en_36829541.mp3",
+        "commonvoice/common_voice_en_36829542.mp3",
+        "commonvoice/common_voice_en_36829543.mp3",
+        "commonvoice/common_voice_en_36829544.mp3",
+        "commonvoice/common_voice_en_36829545.mp3"
+
+        ]
     samples2= [
         "commonvoice/common_voice_en_36905614.mp3",
         "commonvoice/common_voice_en_36905616.mp3"
@@ -445,25 +440,25 @@ def test(prob):
         "cloned\Sample15.wav"
     ]
     predictions = []
-    for sample in samples:
+    for sample in samples3:
         prediction = predict_single_speaker(classifiers, f"samples\{sample}", clone_classifier=clone_clf, proba=prob)
         predictions.append(prediction)
-    print(predictions)
-    return
-    workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model16_07_2023_19_16/data.xlsx"))
+    #print(predictions)
+    
+    workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model21_07_2023_22_27/data.xlsx"))
     worksheet = workbook.active
     speakers = []
     for pred in predictions:
         rows = 1
         for row in worksheet.iter_rows(values_only=True):
             cell = worksheet.cell(row=rows, column=3)
-            if (pred != None) and (int(cell.value[:3]) == pred[0]):
+            if (pred != None) and (int(cell.value[:3]) == pred[0][0]):
                 speakers.append(worksheet.cell(row=rows, column=1).value)
                 break
             rows+=1
     i = 0
     for speaker in speakers:
-        print(f'{samples5[i]} is a sample of: {speaker}')
+        print(f'{samples3[i]} is a sample of: {speaker}')
         i += 1
     
 
