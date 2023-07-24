@@ -54,32 +54,55 @@ def start_voice_interface(cfg):
         
         try:
             recognized = r.recognize_google(audio)
-           
+            
             logging.info(f"word `{recognized}` captured")
-        
+            #print(recognized.strip().lower())
             # if this was a keyword - process a command
-            if recognized.strip().lower() in keywords:
+            keys = recognized.lower().split()
+          
+            #if recognized.strip().lower() in keywords:
+            if len(list(set(keys).intersection(keywords))) > 0:
                 validation = v.validate(audio)
                 if not validation[1]:
                     logging.error("Cloned Voice Detected! Access Denied")
                     return
                 else:
                     ids = cfg['authorized']['id'].split()
-                    logging.info(validation[0][0])
-                    if f'{validation[0][0]}' not in ids:
+                    logging.info(validation[0])
+                    filtered = validation[0]
+                    if filtered[0] == -1:
                         logging.error("Unauthorized Access!")
                         return
-                    logging.info(f'Access Granted for ID {validation[0][0]}')
+                    flag = True
+                    if len(filtered) == 1: #only one hit
+                        if f'{filtered[0][0]}' in ids:
+                            check_out = filtered[0][0]
+                            flag = False
+                    else: #multiple hits
+                        for val in validation[0]:
+                            if (f'{val[0]}' in ids) and val[1] > 0.2:
+                                flag = False
+                                check_out = val[0]
+                                break
+                    if flag:
+                        logging.error("Unauthorized Access!")
+                        return
+                    logging.info(f'Access Granted for ID {check_out}')
                 print('Waiting for a command...')
+                r = sr.Recognizer()
                 with sr.Microphone() as source:
                     r.adjust_for_ambient_noise(source)
+                    
                     command_audio = r.listen(source)
+                    
                     command = r.recognize_google(command_audio) #test 24.04.
                     command = command.lower() #test 26.04.
+    
                     
-                   
+                r = sr.Recognizer()   
+                
                 # exit on stop word
-                print(command)
+                logging.info(command)
                 if command == stopword:
                     logging.info('Exit on stopword')
                     break
@@ -88,9 +111,11 @@ def start_voice_interface(cfg):
                 logging.info(result)
         except sr.UnknownValueError:
             logging.error("Could not understand audio")
+            r = sr.Recognizer()
         except sr.RequestError as e:
             logging.error(f"Could not request results: {e}")
-        pass
+            r = sr.Recognizer()
+        
 
 
 if __name__ == "__main__":

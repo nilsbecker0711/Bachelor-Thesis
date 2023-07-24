@@ -335,11 +335,9 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
         if (len(indizes) > 1):
             #indizes.sort(key = lambda x: abs(x[1] - 1))
             indizes.sort(key = lambda x: x[1], reverse=True)
-            print(indizes)
-            return (indizes[0], True)
+            return (indizes, True)
         elif(len(indizes) == 1):
-            print(indizes)
-            return (indizes[0], True)
+            return (indizes, True)
         else: return ([-1, -1], True)
     except Exception as e:
         print(e)
