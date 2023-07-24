@@ -12,7 +12,7 @@ import openpyxl
 import logging
 from collections import Counter
 
-#import authentication
+
 
 
 
@@ -313,10 +313,7 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     #test if the voice is cloned
     if ((bool(clone_classifier.predict([new_mfcc_features])[0]))):
-        print("Voice is cloned")
-        return("Cloned Voice Detected",False)
-    print("Voice is not cloned")
-    print(clone_classifier.decision_function([new_mfcc_features]))
+        return([-1, -1],False)
     predictions = []
     indizes = []
     index = 0
@@ -331,8 +328,7 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
                 pred =  classifier.predict([new_mfcc_features])[0]
                 if pred == 1:
                     indizes.append([index, classifier.decision_function([new_mfcc_features])[0]])
-                if index == 273:
-                    print(classifier.decision_function([new_mfcc_features])[0])
+               
             predictions.append(pred)
             index += 1
 
@@ -342,9 +338,9 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
             print(indizes)
             return (indizes[0], True)
         elif(len(indizes) == 1):
-           
+            print(indizes)
             return (indizes[0], True)
-        else: return (f"Not found {len(indizes)}", False)
+        else: return ([-1, -1], True)
     except Exception as e:
         print(e)
         return("Error",False)

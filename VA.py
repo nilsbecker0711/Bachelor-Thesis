@@ -3,6 +3,7 @@ import logging
 import logic.processor as prc
 import speech_recognition as sr
 import sounddevice
+import validation as v
     
 def start_text_interface(cfg):
     logging.info("Starting text interface. Type `stop` to finish")
@@ -43,6 +44,8 @@ def start_voice_interface(cfg):
             audio = r.listen(source)
             # test the data comes
             logging.info(f"Len: {len(audio.frame_data)}, Data: {audio.frame_data[:16]}")
+            
+
 
         # simple way to replace if you don't have a micro
         # with sr.AudioFile("/mnt/c/dev/voice.wav") as af:
@@ -56,6 +59,17 @@ def start_voice_interface(cfg):
         
             # if this was a keyword - process a command
             if recognized.strip().lower() in keywords:
+                validation = v.validate(audio)
+                if not validation[1]:
+                    logging.error("Cloned Voice Detected! Access Denied")
+                    return
+                else:
+                    ids = cfg['authorized']['id'].split()
+                    logging.info(validation[0][0])
+                    if f'{validation[0][0]}' not in ids:
+                        logging.error("Unauthorized Access!")
+                        return
+                    logging.info(f'Access Granted for ID {validation[0][0]}')
                 print('Waiting for a command...')
                 with sr.Microphone() as source:
                     r.adjust_for_ambient_noise(source)
@@ -71,7 +85,7 @@ def start_voice_interface(cfg):
                     break
                 result = prc.process(command, cfg, logging)
                 # TODO: SPEAK THE RESULT
-                print(result)
+                logging.info(result)
         except sr.UnknownValueError:
             logging.error("Could not understand audio")
         except sr.RequestError as e:
@@ -82,7 +96,7 @@ def start_voice_interface(cfg):
 if __name__ == "__main__":
     sounddevice.query_devices()
     logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
-    logging.info("Larisa is starting")
+    logging.info("Pacifier is starting")
     config = configparser.ConfigParser()
     config.read('config.ini')
     if 'ui' not in config:
