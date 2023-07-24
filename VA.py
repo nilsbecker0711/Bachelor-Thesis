@@ -96,6 +96,5 @@ if __name__ == "__main__":
     else:
         logging.error("unknown ui mode")
         exit(2)
-    
     logging.info("Smoothly finishing")
  
