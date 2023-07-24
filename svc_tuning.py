@@ -195,7 +195,7 @@ def train_clone_classifier(clone_path, audio_path, data_path):
     print(f"Feature Extraction 1 completed: {datetime.now()}")
     print(f"Feature Extraction 2 started: {datetime.now()}")
     for filename in os.listdir(clone_path):
-          mfcc_features, sr, path = extract_mfcc(f'{audio_path}cloned/{filename}')
+          mfcc_features, sr, path = extract_mfcc(f'samples/cloned/{filename}')
           speakers.append(1)
           features.append(mfcc_features)
     print(f"Feature Extraction 2 completed: {datetime.now()}")
@@ -207,15 +207,15 @@ def train_clone_classifier(clone_path, audio_path, data_path):
 
     return classifier
 
-def add_classifier(audio_path, speaker_name, tune, date): #TODO
+def add_classifier(audio_path, speaker_name, tune, date): 
         features = []
         speaker_features =[]
         audio_paths = []
         for filename in os.listdir(audio_path):
             audio_paths.append(audio_path+filename)
             feature,_,_ = extract_mfcc(audio_path+filename)
-            features.append(feature)
-            speaker_features.append(1)
+            features.append(0)
+            speaker_features.append(feature)
         
         data = os.path.join(dirname, f"models/svc_model{date}/data.xlsx")
         workbook = openpyxl.load_workbook(data)
@@ -224,7 +224,7 @@ def add_classifier(audio_path, speaker_name, tune, date): #TODO
         voice_samples = pd.read_excel(data, usecols=[0,1])
         for index, sample in voice_samples.iterrows():
             speaker_id, audio_path_detail = sample
-            mfcc_features, sr, path = extract_mfcc(f'samples/{audio_path_detail}')
+            mfcc_features, sr, path = extract_mfcc(audio_path_detail)
             speaker_features.append(0)
             features.append(mfcc_features)
 
@@ -244,7 +244,7 @@ def add_classifier(audio_path, speaker_name, tune, date): #TODO
         workbook = openpyxl.load_workbook(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
         worksheet = workbook.active
         for audio_path in audio_paths:
-            data = [speaker_name, audio_path[8:], f'{svc_path}.jl']
+            data = [speaker_name, f'samples/{audio_path[8:]}', f'{svc_path}']
             worksheet.append(data)
         workbook.save(os.path.join(dirname, f"models/svc_model{date}/data.xlsx"))
         workbook.close()
@@ -312,10 +312,11 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
     '''
     new_mfcc_features,_,_ = extract_mfcc(audio_path)
     #test if the voice is cloned
-    if (bool(clone_classifier.predict([new_mfcc_features])[0])):
+    if ((bool(clone_classifier.predict([new_mfcc_features])[0]))):
         print("Voice is cloned")
         return("Cloned Voice Detected",False)
     print("Voice is not cloned")
+    print(clone_classifier.decision_function([new_mfcc_features]))
     predictions = []
     indizes = []
     index = 0
@@ -330,9 +331,11 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
                 pred =  classifier.predict([new_mfcc_features])[0]
                 if pred == 1:
                     indizes.append([index, classifier.decision_function([new_mfcc_features])[0]])
+                if index == 273:
+                    print(classifier.decision_function([new_mfcc_features])[0])
             predictions.append(pred)
             index += 1
-        
+
         if (len(indizes) > 1):
             #indizes.sort(key = lambda x: abs(x[1] - 1))
             indizes.sort(key = lambda x: x[1], reverse=True)
@@ -341,30 +344,38 @@ def predict_single_speaker(classifiers, audio_path, clone_classifier, proba=Fals
         elif(len(indizes) == 1):
            
             return (indizes[0], True)
-        else: return ("Not found", False)
+        else: return (f"Not found {len(indizes)}", False)
     except Exception as e:
         print(e)
         return("Error",False)
 
 def training(save):
 
-    train_speaker_classification("models\svc_model16_07_2023_19_16\data.xlsx", "samples/", tune=False, save = save)
+    train_speaker_classification("models\svc_model24_07_2023_14_23\data.xlsx", "", tune=False, save = save)
 
 def train_clone():
-    train_clone_classifier("samples\\cloned\\", "samples\\", "models/svc_model16_07_2023_19_16/data.xlsx")
+    train_clone_classifier("samples\\cloned\\", "", "models/svc_model24_07_2023_16_08/data.xlsx")
 
 def test(prob):
-    model_path = os.path.join(dirname, "models/svc_model21_07_2023_22_27")
+    model_path = os.path.join(dirname, "models/svc_model24_07_2023_14_23")
     classifiers = []
-    clone_clf = load_classifiers(os.path.join(dirname, "models/svc_model21_07_2023_18_01/clone.jl"))
+    clone_clf = load_classifiers(os.path.join(dirname, "models/svc_model24_07_2023_14_36/clone.jl"))
 
     for filename in os.listdir(model_path):
         #continue
         #print(os.path.join(model_path, filename))
         if filename[len(filename)-2:] == "jl":#only take models
             classifiers.append(load_classifiers(os.path.join(model_path, filename))) 
-    
-    #print(predict_single_speaker(classifiers, f"samples/test/clone2.wav", proba=prob ))
+    '''
+    print(predict_single_speaker(classifiers, f"samples/test/wholemodel_100sample.wav",clone_classifier=clone_clf, proba=prob ))
+    print(predict_single_speaker(classifiers, f"samples/test/lagoon_neutral.wav",clone_classifier=clone_clf, proba=prob ))
+    print(predict_single_speaker(classifiers, f"samples/test/sanm_neutral.wav",clone_classifier=clone_clf, proba=prob ))
+    print(predict_single_speaker(classifiers, f"samples/test/Nils1.wav",clone_classifier=clone_clf, proba=prob ))
+    print(predict_single_speaker(classifiers, f"samples/test/Nils2.wav",clone_classifier=clone_clf, proba=prob ))
+    print(predict_single_speaker(classifiers, f"samples/test/Nils3.wav",clone_classifier=clone_clf, proba=prob ))
+    '''
+    print(predict_single_speaker(classifiers, f"temp.wav",clone_classifier=clone_clf, proba=prob ))
+    return
     #classifiers.append(load_classifiers(os.path.join(model_path, "012-372293e65cdab88771e028a4351651ab2eff64438ddafc211e089247dcdccca350153465eb5409ce708081d9ad384af45d1dc57bbe030ae1a2c0edd561322fb8.jl")))
     samples = [
         "commonvoice/common_voice_en_36829540.mp3",
@@ -404,6 +415,7 @@ def test(prob):
         "Nils/Sample12.wav",
         "Nils/Sample13.wav",
         "Nils/Sample14.wav",
+        "test/Nils1.wav",
         "Nils/Sample15.wav",
         "Nils/Sample16.wav",
         "Nils/Sample17.wav",
@@ -414,6 +426,7 @@ def test(prob):
         "Nils/Sample21.wav",
         "Nils/Sample22.wav",
         "Nils/Sample23.wav",
+        "cloned\Sample8.wav",
         "Nils/Sample3.wav",
         "Nils/Sample4.wav",
         "Nils/Sample5.wav",
@@ -437,15 +450,63 @@ def test(prob):
         "cloned\Sample12.wav",
         "cloned\Sample13.wav",
         "cloned\Sample14.wav",
-        "cloned\Sample15.wav"
+        "cloned\Sample15.wav",
+        "cloned\Beth (1).wav"
+    ]
+    samples6 = []
+    samples6.extend(samples)
+    samples6.extend(samples2)
+    samples6.extend(samples3)
+    samples6.extend(samples4)
+    samples6.extend(samples5)
+    samples7 = ["cloned/Beth (1).wav",
+                "cloned/Beth (2).wav",
+                "cloned/Beth (3).wav",
+                "cloned/Beth (4).wav",
+                "cloned/Beth (5).wav", 
+                "cloned/Beth (6).wav", 
+                "cloned/Beth (7).wav", 
+                "cloned/Beth (8).wav", 
+                "cloned/Beth (9).wav", 
+                "cloned/Beth (10).wav",
+                "cloned/Beth (11).wav",
+                "cloned/Beth (12).wav",
+                "cloned/Beth (13).wav",
+                "cloned/Beth (14).wav",
+                "cloned/Beth (15).wav",
+                "cloned/Beth (16).wav",
+                "cloned/Beth (17).wav",
+                "cloned/Beth (18).wav",
+                "cloned/Beth (19).wav",
+                "cloned/Beth (20).wav",
+                "cloned/Charles (1).wav", 
+                "cloned/Charles (2).wav", 
+                "cloned/Charles (3).wav", 
+                "cloned/Charles (4).wav", 
+                "cloned/Charles (5).wav", 
+                "cloned/Charles (6).wav", 
+                "cloned/Charles (7).wav", 
+                "cloned/Charles (8).wav", 
+                "cloned/Charles (9).wav", 
+                "cloned/Charles (10).wav",
+                "cloned/Charles (11).wav", 
+                "cloned/Charles (12).wav", 
+                "cloned/Charles (13).wav", 
+                "cloned/Charles (14).wav", 
+                "cloned/Charles (15).wav", 
+                "cloned/Charles (16).wav", 
+                "cloned/Charles (17).wav", 
+                "cloned/Charles (18).wav", 
+                "cloned/Charles (19).wav", 
+                "cloned/Charles (20).wav" 
     ]
     predictions = []
-    for sample in samples3:
+    for sample in samples4:
         prediction = predict_single_speaker(classifiers, f"samples\{sample}", clone_classifier=clone_clf, proba=prob)
         predictions.append(prediction)
     #print(predictions)
     
-    workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model21_07_2023_22_27/data.xlsx"))
+    workbook = openpyxl.load_workbook(os.path.join(dirname, "models/svc_model22_07_2023_12_15/data.xlsx"))
     worksheet = workbook.active
     speakers = []
     for pred in predictions:
@@ -458,17 +519,17 @@ def test(prob):
             rows+=1
     i = 0
     for speaker in speakers:
-        print(f'{samples3[i]} is a sample of: {speaker}')
+        print(f'{samples4[i]} is a sample of: {speaker}')
         i += 1
     
 
 
 #Code Test
 
-#add_classifier(speaker_name = "Nils", audio_path = "samples/Nils/", date = "16_07_2023_19_16", tune = False)
+#add_classifier(speaker_name = "Nils", audio_path = "samples/Nils/", date = "24_07_2023_14_23", tune = False)
 #str = "012-37229"
 #print(int(str[:3]))
-test(False)
+#test(False)
 #training(save=True)
 #train_clone()
 #print(predict_clone(load_classifiers(os.path.join(dirname, "models/svc_model21_07_2023_18_01/clone.jl")), "samples/test/clone.wav"))
