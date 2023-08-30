@@ -31,11 +31,10 @@ def start_voice_interface(cfg):
     logging.info(f"Keyword = {keywords}, stopword = {stopword}, Recognizer = {recognizer_type}")
     command = None
     ibm_auth, ibm_recognizer = None, None
-    # use this code: https://stackoverflow.com/questions/48777294/python-app-listening-for-a-keyword-like-cortana
+
     # get audio from the microphone
     r = sr.Recognizer()
-    # r.dynamic_energy_threshold = False
-
+   
     while command != stopword:
         # wait for a trigger word
         with sr.Microphone() as source:
@@ -45,13 +44,6 @@ def start_voice_interface(cfg):
             # test the data comes
             logging.info(f"Len: {len(audio.frame_data)}, Data: {audio.frame_data[:16]}")
             
-
-
-        # simple way to replace if you don't have a micro
-        # with sr.AudioFile("/mnt/c/dev/voice.wav") as af:
-        #     audio = r.record(af)
-        
-        
         try:
             recognized = r.recognize_google(audio)
             
@@ -95,8 +87,8 @@ def start_voice_interface(cfg):
                     
                     command_audio = r.listen(source)
                     
-                    command = r.recognize_google(command_audio) #test 24.04.
-                    command = command.lower() #test 26.04.
+                    command = r.recognize_google(command_audio) 
+                    command = command.lower() 
     
                     
                 r = sr.Recognizer()   

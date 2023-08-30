@@ -1,8 +1,6 @@
 import speech_recognition
-import sounddevice
+
 import authenticator as svc
-import numpy as np
-import wave
 import os
 
 
@@ -16,12 +14,10 @@ for filename in os.listdir(model_path):
     if filename[len(filename)-2:] == "jl":#only take models
         classifiers.append(svc.load_classifiers(os.path.join(model_path, filename)))
         names.append(filename)
-
 def validate (audio):
     name = 'temp.wav'
     with open(name, "wb") as f:
         f.write(audio.get_wav_data())
     pred = svc.predict_single_speaker(classifiers=classifiers, clone_classifier=clone_clf, audio_path=name)
-    
     return pred
        
