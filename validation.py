@@ -1,5 +1,4 @@
 import speech_recognition
-
 import authenticator as svc
 import os
 
